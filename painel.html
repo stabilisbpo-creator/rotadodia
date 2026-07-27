@@ -68,6 +68,19 @@
 
   .loading { text-align: center; color: var(--text-faint); font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 30px 0; }
 
+  .item-card.status-Compromisso { border-color: var(--bronze); background: linear-gradient(90deg, var(--bronze-dim), var(--surface) 25%); }
+  .item-card.status-Compromisso .item-title { color: #e6cba8; }
+  .cal-tag { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bronze); margin-top: 6px; display: inline-block; }
+
+  .highlight-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .devotional, .quote-card {
+    background: linear-gradient(135deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--steel-dim); border-radius: var(--radius); padding: 13px 15px;
+  }
+  .hl-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); }
+  .hl-quote { font-size: 13px; line-height: 1.5; margin-top: 6px; }
+  .hl-ref { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--text-muted); margin-top: 6px; }
+
   .summary { display: flex; gap: 8px; margin-bottom: 22px; }
   .summary-card { flex: 1; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 12px 14px; }
   .summary-card .num { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; }
@@ -182,6 +195,8 @@
       <button class="nav-btn" id="nextDay" aria-label="Próximo dia">›</button>
     </div>
 
+    <div id="highlightRow" class="highlight-row"></div>
+
     <div id="conteudoDia"><div class="loading">carregando o dia...</div></div>
 
     <button class="save-day-btn" id="saveDayBtn" style="display:none;">Salvar dia e avançar <span>→</span></button>
@@ -249,7 +264,7 @@
 
     const concluidos = itensDoDia.filter(i => i.status === "Concluido").length;
     const naoConcluidos = itensDoDia.filter(i => i.status === "NaoConcluido").length;
-    const pendentes = itensDoDia.length - concluidos - naoConcluidos;
+    const pendentes = itensDoDia.filter(i => i.status === "Pendente").length;
 
     const summary = document.createElement("div");
     summary.className = "summary";
@@ -274,7 +289,9 @@
       const card = document.createElement("div");
       card.className = "item-card status-" + item.status;
       let acao = "";
-      if (item.status === "Pendente") {
+      if (item.status === "Compromisso") {
+        acao = `<div class="cal-tag">📅 Google Calendar</div>`;
+      } else if (item.status === "Pendente") {
         acao = `
           <div class="item-actions">
             <button class="action-btn ok" data-id="${item.configId}" data-status="Concluido">Concluído</button>
@@ -500,7 +517,29 @@
     });
   }
 
+  async function carregarDestaques() {
+    try {
+      const resp = await fetch(SCRIPT_URL + "?action=getDestaques");
+      const json = await resp.json();
+      const el = document.getElementById("highlightRow");
+      el.innerHTML = `
+        <div class="devotional">
+          <div class="hl-eyebrow">📖 Devocional de hoje</div>
+          <div class="hl-quote">"${json.versiculo.texto}"</div>
+          <div class="hl-ref">${json.versiculo.referencia} — NVI</div>
+        </div>
+        <div class="quote-card">
+          <div class="hl-eyebrow">💬 Frase do dia</div>
+          <div class="hl-quote">"${json.frase.texto}"</div>
+          <div class="hl-ref">${json.frase.autor} — traduzido automaticamente</div>
+        </div>`;
+    } catch (err) {
+      // se falhar, simplesmente não mostra os cards — não trava o resto do painel
+    }
+  }
+
   carregarDia();
+  carregarDestaques();
 </script>
 </body>
 </html>

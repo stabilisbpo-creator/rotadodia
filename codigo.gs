@@ -75,6 +75,8 @@ function doGet(e) {
   const action = e.parameter.action;
   if (action === "getDia") return getDia(e.parameter.data);
   if (action === "getConfig") return responder({ status: "ok", config: lerConfig() });
+  if (action === "getHistorico") return getHistorico(e.parameter);
+  if (action === "getDestaques") return getDestaques();
   return responder({ status: "ok" });
 }
 
@@ -139,12 +141,58 @@ function getDia(dataStr) {
 
   registros.forEach(r => { r.tipo = tipoPorId[r.configId] || "Outros"; });
 
+  // adiciona os compromissos reais do Calendar (leitura, sem status pra marcar)
+  try {
+    const compromissos = lerCompromissosDoDia(dataStr);
+    compromissos.forEach((c, idx) => {
+      registros.push({
+        linha: null, data: dataStr, configId: "CAL_" + idx,
+        horario: c.horario, atividade: c.titulo, status: "Compromisso",
+        dataHoraResposta: "", diaFechado: false, tipo: "Compromisso"
+      });
+    });
+  } catch (err) {
+    Logger.log("Não consegui ler compromissos do Calendar: " + err);
+  }
+
   return responder({ status: "ok", data: dataStr, itens: registros });
 }
 
-// ============================================================
-// ESCRITA
-// ============================================================
+// Retorna os registros dos últimos N dias (padrão 30), pra alimentar a aba de evolução.
+function getHistorico(params) {
+  const dias = parseInt(params.dias, 10) || 30;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - dias);
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const aba = ss.getSheetByName(REGISTROS_SHEET);
+  if (!aba || aba.getLastRow() < 2) return responder({ status: "ok", itens: [] });
+
+  const config = lerConfig();
+  const tipoPorId = {};
+  config.forEach(c => { tipoPorId[c.id] = c.tipo; });
+
+  const linhas = aba.getRange(2, 1, aba.getLastRow() - 1, 7).getValues();
+  const itens = linhas
+    .map(l => ({
+      data: formatarData(l[0]), configId: l[1], horario: formatarHora(l[2]),
+      atividade: l[3], status: l[4], dataHoraResposta: l[5], diaFechado: l[6],
+      tipo: tipoPorId[l[1]] || "Outros"
+    }))
+    .filter(i => {
+      const d = parseDataBR(i.data);
+      return d && d >= cutoff;
+    });
+
+  return responder({ status: "ok", itens: itens });
+}
+
+function parseDataBR(str) {
+  if (!str) return null;
+  const partes = str.split("/");
+  if (partes.length !== 3) return null;
+  return new Date(parseInt(partes[2], 10), parseInt(partes[1], 10) - 1, parseInt(partes[0], 10));
+}
 function marcarStatus(dados) {
   // dados: { data, configId, status }
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -200,8 +248,12 @@ function salvarRotina(dados) {
     }
   });
 
-  // TODO: quando o acesso ao Calendar do João estiver liberado,
-  // chamar aqui: sincronizarRotinaComCalendar()
+  // sincroniza com o Google Calendar (rotina pessoal), sem travar o salvamento se algo falhar
+  try {
+    sincronizarRotinaComCalendar();
+  } catch (err) {
+    Logger.log("Falha ao sincronizar com o Calendar: " + err);
+  }
 
   if (dados.aplicarHoje) {
     const hoje = formatarData(new Date());
@@ -251,23 +303,157 @@ function enviarAlerta(texto) {
 }
 
 // ============================================================
-// FUTURO — sincronização com o Google Calendar do João
-// (depende de acesso à conta joao@stabilisbpo.com.br, ainda pendente)
+// DESTAQUES DO DIA — versículo + frase motivacional
+// (busca 1x por dia e guarda em cache, pra não bater na API toda hora)
 // ============================================================
-function sincronizarRotinaComCalendar() {
-  // const calendario = CalendarApp.getCalendarById("joao@stabilisbpo.com.br");
-  // Pra cada item Tipo="Rotina" na Config:
-  //   1. Se já tem IDEventoCalendar, apagar o evento antigo
-  //   2. Criar evento recorrente diário no novo horário
-  //   3. Salvar o novo ID de volta na coluna IDEventoCalendar
-  throw new Error("Aguardando definição do acesso à conta do João.");
+function getDestaques() {
+  const hojeStr = formatarData(new Date());
+  const props = PropertiesService.getScriptProperties();
+  const chave = "destaques_" + hojeStr;
+
+  const salvo = props.getProperty(chave);
+  if (salvo) return responder(JSON.parse(salvo));
+
+  const resultado = {
+    status: "ok",
+    versiculo: buscarVersiculo(),
+    frase: buscarFraseTraduzida()
+  };
+  props.setProperty(chave, JSON.stringify(resultado));
+  return responder(resultado);
 }
 
+function buscarVersiculo() {
+  try {
+    const resp = UrlFetchApp.fetch("https://www.abibliadigital.com.br/api/verses/nvi/random", { muteHttpExceptions: true });
+    const json = JSON.parse(resp.getContentText());
+    return { texto: json.text, referencia: json.book.name + " " + json.chapter + ":" + json.verse };
+  } catch (err) {
+    return { texto: "Tudo o que fizerem, façam de todo o coração, como para o Senhor.", referencia: "Colossenses 3:23" };
+  }
+}
+
+function buscarFraseTraduzida() {
+  try {
+    const respQuote = UrlFetchApp.fetch("https://zenquotes.io/api/random", { muteHttpExceptions: true });
+    const quote = JSON.parse(respQuote.getContentText())[0];
+
+    const respTrad = UrlFetchApp.fetch(
+      "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(quote.q) + "&langpair=en|pt-BR",
+      { muteHttpExceptions: true }
+    );
+    const trad = JSON.parse(respTrad.getContentText());
+    const texto = trad.responseData && trad.responseData.translatedText ? trad.responseData.translatedText : quote.q;
+
+    return { texto: texto, autor: quote.a };
+  } catch (err) {
+    return { texto: "A disciplina é a ponte entre metas e realizações.", autor: "Jim Rohn" };
+  }
+}
+
+// Rede de segurança: apaga TODOS os eventos recorrentes que a sincronização criou,
+// usando os IDs salvos na coluna IDEventoCalendar. Roda manualmente pelo editor.
+function apagarRotinaDoCalendar() {
+  const calendario = CalendarApp.getCalendarById(CALENDAR_ID);
+  if (!calendario) throw new Error("Não encontrei ou não tenho acesso ao calendário: " + CALENDAR_ID);
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const abaConfig = ss.getSheetByName(CONFIG_SHEET);
+  const linhas = abaConfig.getRange(2, 1, abaConfig.getLastRow() - 1, 7).getValues();
+
+  let apagados = 0;
+  linhas.forEach((l, idx) => {
+    const idEvento = l[6];
+    if (!idEvento) return;
+    try {
+      const serie = calendario.getEventSeriesById(idEvento);
+      if (serie) {
+        serie.deleteEventSeries();
+        apagados++;
+      }
+    } catch (err) {
+      Logger.log("Não consegui apagar o evento da linha " + (idx + 2) + ": " + err);
+    }
+    abaConfig.getRange(idx + 2, 7).setValue(""); // limpa o ID na planilha de qualquer forma
+  });
+
+  Logger.log("Apagados " + apagados + " eventos recorrentes do Calendar.");
+}
+
+// ============================================================
+// GOOGLE CALENDAR — jonga.chaves@gmail.com
+// ============================================================
+const CALENDAR_ID = "jonga.chaves@gmail.com";
+
+// Cria/atualiza os eventos recorrentes diários da ROTINA PESSOAL no Calendar dele.
+// Só sincroniza itens Tipo="Rotina" — o Bloco Profissional fica só no painel.
+// A duração de cada evento é calculada até o horário do próximo item da rotina
+// (o último item do dia usa 15 min como padrão).
+function sincronizarRotinaComCalendar() {
+  const calendario = CalendarApp.getCalendarById(CALENDAR_ID);
+  if (!calendario) throw new Error("Não encontrei ou não tenho acesso ao calendário: " + CALENDAR_ID);
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const abaConfig = ss.getSheetByName(CONFIG_SHEET);
+  const linhas = abaConfig.getRange(2, 1, abaConfig.getLastRow() - 1, 7).getValues();
+
+  const rotina = linhas
+    .map((l, idx) => ({
+      linhaPlanilha: idx + 2, id: l[0], horario: formatarHora(l[1]),
+      atividade: l[2], tipo: l[4], ativo: l[5], idEvento: l[6]
+    }))
+    .filter(r => r.tipo === "Rotina" && r.ativo === true)
+    .sort((a, b) => a.horario.localeCompare(b.horario));
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  rotina.forEach((item, idx) => {
+    // apaga a série antiga, se já existia
+    if (item.idEvento) {
+      try {
+        const antigo = calendario.getEventSeriesById(item.idEvento);
+        if (antigo) antigo.deleteEventSeries();
+      } catch (e) {
+        // série já não existe mais (foi apagada manualmente) — segue o baile
+      }
+    }
+
+    const [h, m] = item.horario.split(":").map(Number);
+    const inicio = new Date(hoje);
+    inicio.setHours(h, m, 0, 0);
+
+    let duracaoMin = 15;
+    if (idx < rotina.length - 1) {
+      const [h2, m2] = rotina[idx + 1].horario.split(":").map(Number);
+      const calc = (h2 * 60 + m2) - (h * 60 + m);
+      if (calc > 0) duracaoMin = calc;
+    }
+    const fim = new Date(inicio.getTime() + duracaoMin * 60000);
+
+    const recorrencia = CalendarApp.newRecurrence().addDailyRule();
+    const serie = calendario.createEventSeries(item.atividade, inicio, fim, recorrencia);
+
+    abaConfig.getRange(item.linhaPlanilha, 7).setValue(serie.getId());
+  });
+
+  Logger.log("Rotina sincronizada: " + rotina.length + " itens.");
+}
+
+// Lê os compromissos reais (reuniões etc.) do dia, pra exibir como referência no painel.
 function lerCompromissosDoDia(dataStr) {
-  // const calendario = CalendarApp.getCalendarById("joao@stabilisbpo.com.br");
-  // const eventos = calendario.getEventsForDay(new Date(...));
-  // retornar título + horário de cada evento pra exibir como bloco bronze no painel
-  throw new Error("Aguardando definição do acesso à conta do João.");
+  const calendario = CalendarApp.getCalendarById(CALENDAR_ID);
+  if (!calendario) throw new Error("Não encontrei ou não tenho acesso ao calendário: " + CALENDAR_ID);
+
+  const [dd, mm, aaaa] = dataStr.split("/").map(Number);
+  const dia = new Date(aaaa, mm - 1, dd);
+  const eventos = calendario.getEventsForDay(dia);
+
+  return eventos.map(ev => ({
+    titulo: ev.getTitle(),
+    horario: Utilities.formatDate(ev.getStartTime(), Session.getScriptTimeZone(), "HH:mm"),
+    horarioFim: Utilities.formatDate(ev.getEndTime(), Session.getScriptTimeZone(), "HH:mm")
+  }));
 }
 
 // ============================================================
