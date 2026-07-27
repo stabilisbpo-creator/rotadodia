@@ -28,7 +28,7 @@
   }
   .app { width: 100%; max-width: 480px; }
 
-  .app-header { text-align: center; margin-bottom: 22px; }
+  .app-header { text-align: center; margin-bottom: 18px; }
   .app-header .mark { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-faint); }
   .app-header .title {
     font-size: 27px; font-weight: 700; letter-spacing: -0.02em; margin-top: 3px;
@@ -36,7 +36,18 @@
     -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block;
   }
   .app-header .rule { width: 46px; height: 2px; margin: 10px auto 0; border-radius: 2px; background: linear-gradient(90deg, var(--steel), var(--bronze)); }
-  .header-actions { display: flex; justify-content: center; margin-top: 10px; }
+
+  .main-tabs { display: flex; gap: 6px; margin: 18px 0 20px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 12px; padding: 4px; }
+  .main-tab {
+    flex: 1; text-align: center; padding: 9px 0; border-radius: 9px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--text-muted); font-family: 'Space Grotesk', sans-serif;
+  }
+  .main-tab.active { background: linear-gradient(135deg, var(--steel-dim), var(--bronze-dim)); color: var(--text); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .header-actions { display: flex; justify-content: center; margin-bottom: 6px; }
   .edit-toggle {
     display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border);
     border-radius: 20px; padding: 6px 14px; color: var(--text-muted); font-size: 12px; cursor: pointer;
@@ -45,7 +56,7 @@
   .edit-toggle:hover { border-color: var(--steel); color: var(--steel); }
   .edit-toggle.active { border-color: var(--bronze); color: var(--bronze); background: var(--bronze-dim); }
 
-  .day-nav { display: flex; align-items: center; justify-content: space-between; margin: 20px 0; }
+  .day-nav { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 20px; }
   .nav-btn {
     width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface);
     color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;
@@ -67,10 +78,7 @@
   .section-divider .line { flex: 1; height: 1px; background: var(--border-soft); }
   .section-divider .label { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; }
 
-  .item-card {
-    background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius);
-    padding: 12px 14px; margin-bottom: 8px;
-  }
+  .item-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }
   .item-card.status-Concluido { border-color: var(--success-dim); }
   .item-card.status-NaoConcluido { border-color: var(--fail-dim); }
   .item-time { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-faint); }
@@ -79,8 +87,7 @@
   .item-actions { display: flex; gap: 8px; margin-top: 9px; }
   .action-btn {
     flex: 1; border: 1px solid var(--border); background: transparent; color: var(--text-muted);
-    font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; font-weight: 500;
-    padding: 7px 0; border-radius: 7px; cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; font-weight: 500; padding: 7px 0; border-radius: 7px; cursor: pointer;
   }
   .action-btn.ok.active { background: var(--success-dim); border-color: var(--success); color: var(--success); }
   .action-btn.no.active { background: var(--fail-dim); border-color: var(--fail); color: var(--fail); }
@@ -108,6 +115,42 @@
   }
   .save-confirm { text-align: center; font-size: 11.5px; color: var(--success); font-family: 'IBM Plex Mono', monospace; margin-top: 10px; opacity: 0; transition: opacity 0.2s ease; }
   .save-confirm.show { opacity: 1; }
+
+  .period-tabs { display: flex; gap: 6px; margin: 4px 0 20px; }
+  .period-tab {
+    flex: 1; text-align: center; padding: 8px 0; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text-muted); font-size: 12.5px; cursor: pointer; font-family: 'Space Grotesk', sans-serif;
+  }
+  .period-tab.active { border-color: var(--bronze); color: var(--bronze); background: var(--bronze-dim); }
+
+  .summary-row { display: flex; gap: 8px; margin-bottom: 22px; }
+  .summary-card2 { flex: 1; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 13px 12px; text-align: center; }
+  .summary-card2 .num { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; color: var(--bronze); }
+  .summary-card2 .lbl { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.3; }
+
+  .section-title { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); margin: 24px 0 12px; }
+
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 130px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 12px 10px 8px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--border); min-height: 3px; transition: height 0.3s ease; }
+  .bar.high { background: var(--success); }
+  .bar.mid { background: var(--bronze); }
+  .bar.low { background: var(--fail); }
+  .bar-lbl { font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; color: var(--text-faint); margin-top: 5px; }
+
+  .tipo-row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; }
+  .tipo-row .nome { flex-shrink: 0; width: 92px; font-size: 12.5px; color: var(--text-muted); }
+  .tipo-row .track { flex: 1; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .tipo-row .fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--steel), var(--bronze)); }
+  .tipo-row .pct { width: 38px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--text); }
+
+  .streak-card {
+    background: linear-gradient(135deg, var(--bronze-dim), var(--surface) 75%);
+    border: 1px solid #6b4e30; border-radius: var(--radius); padding: 16px; text-align: center; margin-bottom: 8px;
+  }
+  .streak-card .num { font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 700; color: var(--bronze); }
+  .streak-card .lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
   .footer-note { text-align: center; margin-top: 24px; font-size: 11px; color: var(--text-faint); font-family: 'IBM Plex Mono', monospace; }
 </style>
 </head>
@@ -118,33 +161,57 @@
     <div class="mark">STABILIS · PRODUTIVIDADE PESSOAL</div>
     <div class="title">Rota do Dia</div>
     <div class="rule"></div>
+  </div>
+
+  <div class="main-tabs">
+    <div class="main-tab active" data-view="dia">📋 Hoje</div>
+    <div class="main-tab" data-view="evolucao">📈 Evolução</div>
+  </div>
+
+  <div class="view active" id="viewDia">
     <div class="header-actions">
       <button class="edit-toggle" id="editToggle">✏️ Editar rotina</button>
     </div>
-  </div>
 
-  <div class="day-nav">
-    <button class="nav-btn" id="prevDay" aria-label="Dia anterior">‹</button>
-    <div class="day-label">
-      <span class="weekday" id="weekdayLabel">—</span>
-      <span class="date" id="dateLabel">—</span>
+    <div class="day-nav">
+      <button class="nav-btn" id="prevDay" aria-label="Dia anterior">‹</button>
+      <div class="day-label">
+        <span class="weekday" id="weekdayLabel">—</span>
+        <span class="date" id="dateLabel">—</span>
+      </div>
+      <button class="nav-btn" id="nextDay" aria-label="Próximo dia">›</button>
     </div>
-    <button class="nav-btn" id="nextDay" aria-label="Próximo dia">›</button>
+
+    <div id="conteudoDia"><div class="loading">carregando o dia...</div></div>
+
+    <button class="save-day-btn" id="saveDayBtn" style="display:none;">Salvar dia e avançar <span>→</span></button>
+    <div class="save-confirm" id="saveConfirm"></div>
   </div>
 
-  <div id="conteudo">
-    <div class="loading">carregando o dia...</div>
+  <div class="view" id="viewEvolucao">
+    <div class="period-tabs">
+      <div class="period-tab" data-dias="7">7 dias</div>
+      <div class="period-tab active" data-dias="14">14 dias</div>
+      <div class="period-tab" data-dias="30">30 dias</div>
+    </div>
+    <div id="conteudoEvolucao"><div class="loading">carregando histórico...</div></div>
   </div>
-
-  <button class="save-day-btn" id="saveDayBtn" style="display:none;">Salvar dia e avançar <span>→</span></button>
-  <div class="save-confirm" id="saveConfirm"></div>
 
   <div class="footer-note">rota do dia · stabilis</div>
 </div>
 
 <script>
-  // ⚠️ atualizar sempre que reimplantar o Apps Script
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnLjL6rqu6ShvSiKGsEPlddNjJKUR1MYHm3KmEZauNtlQXIsnqY8FRUPL3hevRZsjRfg/exec";
+
+  document.querySelectorAll(".main-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".main-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById("view" + (tab.dataset.view === "dia" ? "Dia" : "Evolucao")).classList.add("active");
+      if (tab.dataset.view === "evolucao" && !evolucaoCarregada) carregarHistorico();
+    });
+  });
 
   let dataAtual = new Date();
   let itensDoDia = [];
@@ -162,7 +229,7 @@
   }
 
   async function carregarDia() {
-    document.getElementById("conteudo").innerHTML = '<div class="loading">carregando o dia...</div>';
+    document.getElementById("conteudoDia").innerHTML = '<div class="loading">carregando o dia...</div>';
     document.getElementById("saveDayBtn").style.display = "none";
     renderCabecalhoData();
     const dataStr = formatarDataBR(dataAtual);
@@ -172,12 +239,12 @@
       itensDoDia = json.itens || [];
       renderDia();
     } catch (err) {
-      document.getElementById("conteudo").innerHTML = '<div class="loading">erro ao carregar — confira a SCRIPT_URL</div>';
+      document.getElementById("conteudoDia").innerHTML = '<div class="loading">erro ao carregar — confira a SCRIPT_URL</div>';
     }
   }
 
   function renderDia() {
-    const cont = document.getElementById("conteudo");
+    const cont = document.getElementById("conteudoDia");
     cont.innerHTML = "";
 
     const concluidos = itensDoDia.filter(i => i.status === "Concluido").length;
@@ -193,7 +260,6 @@
     cont.appendChild(summary);
 
     let ultimoTipo = null;
-    // ordena pelo horário
     const ordenado = [...itensDoDia].sort((a, b) => a.horario.localeCompare(b.horario));
 
     ordenado.forEach(item => {
@@ -242,14 +308,8 @@
     renderDia();
   }
 
-  document.getElementById("prevDay").addEventListener("click", () => {
-    dataAtual.setDate(dataAtual.getDate() - 1);
-    carregarDia();
-  });
-  document.getElementById("nextDay").addEventListener("click", () => {
-    dataAtual.setDate(dataAtual.getDate() + 1);
-    carregarDia();
-  });
+  document.getElementById("prevDay").addEventListener("click", () => { dataAtual.setDate(dataAtual.getDate() - 1); carregarDia(); });
+  document.getElementById("nextDay").addEventListener("click", () => { dataAtual.setDate(dataAtual.getDate() + 1); carregarDia(); });
 
   document.getElementById("saveDayBtn").addEventListener("click", async () => {
     const dataStr = formatarDataBR(dataAtual);
@@ -265,15 +325,15 @@
       confirmEl.classList.remove("show");
       dataAtual.setDate(dataAtual.getDate() + 1);
       carregarDia();
+      evolucaoCarregada = false;
     }, 900);
   });
 
-  // ---- modo edição ----
   document.getElementById("editToggle").addEventListener("click", carregarEdicao);
 
   async function carregarEdicao() {
     const toggle = document.getElementById("editToggle");
-    const cont = document.getElementById("conteudo");
+    const cont = document.getElementById("conteudoDia");
     document.getElementById("saveDayBtn").style.display = "none";
     cont.innerHTML = '<div class="loading">carregando rotina...</div>';
     toggle.textContent = "✕ Fechar edição";
@@ -282,7 +342,7 @@
     const json = await resp.json();
     const itens = json.config || [];
 
-    let html = `<div class="edit-panel show">
+    cont.innerHTML = `<div class="edit-panel show">
       <div class="edit-note">Edite horário e nome. As mudanças passam a valer a partir de amanhã, a menos que você marque "aplicar também hoje".</div>
       <div id="editRows"></div>
       <label class="apply-option"><input type="checkbox" id="applyToday"> Aplicar também no dia de hoje</label>
@@ -291,7 +351,6 @@
         <button class="save-btn" id="confirmEdit">Salvar rotina</button>
       </div>
     </div>`;
-    cont.innerHTML = html;
 
     const rowsDiv = document.getElementById("editRows");
     itens.forEach(item => {
@@ -312,9 +371,7 @@
     document.getElementById("confirmEdit").addEventListener("click", async () => {
       const aplicarHoje = document.getElementById("applyToday").checked;
       const novosItens = [...rowsDiv.children].map(row => ({
-        id: row.dataset.id,
-        tipo: row.dataset.tipo,
-        alerta: row.dataset.alerta,
+        id: row.dataset.id, tipo: row.dataset.tipo, alerta: row.dataset.alerta,
         horario: row.querySelector('input[type="time"]').value,
         atividade: row.querySelector('input[type="text"]').value
       }));
@@ -325,6 +382,121 @@
       });
       toggle.textContent = "✏️ Editar rotina";
       carregarDia();
+    });
+  }
+
+  let diasSelecionados = 14;
+  let evolucaoCarregada = false;
+
+  document.querySelectorAll(".period-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".period-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      diasSelecionados = parseInt(tab.dataset.dias, 10);
+      carregarHistorico();
+    });
+  });
+
+  function parseDataBR(str) {
+    const p = str.split("/");
+    return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+  }
+
+  async function carregarHistorico() {
+    document.getElementById("conteudoEvolucao").innerHTML = '<div class="loading">carregando histórico...</div>';
+    try {
+      const resp = await fetch(SCRIPT_URL + "?action=getHistorico&dias=" + diasSelecionados);
+      const json = await resp.json();
+      renderHistorico(json.itens || []);
+      evolucaoCarregada = true;
+    } catch (err) {
+      document.getElementById("conteudoEvolucao").innerHTML = '<div class="loading">erro ao carregar — confira a SCRIPT_URL</div>';
+    }
+  }
+
+  function renderHistorico(itens) {
+    const cont = document.getElementById("conteudoEvolucao");
+    cont.innerHTML = "";
+
+    if (itens.length === 0) {
+      cont.innerHTML = '<div class="loading">ainda não há registros nesse período</div>';
+      return;
+    }
+
+    const porDia = {};
+    itens.forEach(i => { (porDia[i.data] = porDia[i.data] || []).push(i); });
+    const diasOrdenados = Object.keys(porDia).sort((a, b) => parseDataBR(a) - parseDataBR(b));
+
+    const totalConcluido = itens.filter(i => i.status === "Concluido").length;
+    const totalNao = itens.filter(i => i.status === "NaoConcluido").length;
+    const totalRespondido = totalConcluido + totalNao;
+    const taxaGeral = totalRespondido > 0 ? Math.round((totalConcluido / totalRespondido) * 100) : 0;
+
+    const summary = document.createElement("div");
+    summary.className = "summary-row";
+    summary.innerHTML = `
+      <div class="summary-card2"><div class="num">${diasOrdenados.length}</div><div class="lbl">Dias registrados</div></div>
+      <div class="summary-card2"><div class="num">${taxaGeral}%</div><div class="lbl">Taxa de conclusão</div></div>
+      <div class="summary-card2"><div class="num">${totalConcluido}</div><div class="lbl">Tarefas concluídas</div></div>`;
+    cont.appendChild(summary);
+
+    let sequencia = 0;
+    for (let i = diasOrdenados.length - 1; i >= 0; i--) {
+      const doDia = porDia[diasOrdenados[i]];
+      const fechado = doDia.some(x => x.diaFechado === true);
+      if (!fechado) continue;
+      const conc = doDia.filter(x => x.status === "Concluido").length;
+      const nao = doDia.filter(x => x.status === "NaoConcluido").length;
+      const taxa = (conc + nao) > 0 ? conc / (conc + nao) : 0;
+      if (taxa >= 0.8) sequencia++; else break;
+    }
+    const streak = document.createElement("div");
+    streak.className = "streak-card";
+    streak.innerHTML = `<div class="num">${sequencia}</div><div class="lbl">dias seguidos com 80%+ de conclusão</div>`;
+    cont.appendChild(streak);
+
+    const chartTitle = document.createElement("div");
+    chartTitle.className = "section-title";
+    chartTitle.textContent = "Conclusão por dia";
+    cont.appendChild(chartTitle);
+
+    const chart = document.createElement("div");
+    chart.className = "bar-chart";
+    diasOrdenados.forEach(data => {
+      const doDia = porDia[data];
+      const conc = doDia.filter(x => x.status === "Concluido").length;
+      const nao = doDia.filter(x => x.status === "NaoConcluido").length;
+      const taxa = (conc + nao) > 0 ? Math.round((conc / (conc + nao)) * 100) : 0;
+      const alturaPx = Math.max(3, Math.round((taxa / 100) * 95));
+      let classe = "low";
+      if (taxa >= 75) classe = "high"; else if (taxa >= 40) classe = "mid";
+      const dd = data.split("/")[0];
+      const col = document.createElement("div");
+      col.className = "bar-col";
+      col.innerHTML = `<div class="bar ${classe}" style="height:${alturaPx}px;" title="${data} — ${taxa}%"></div><div class="bar-lbl">${dd}</div>`;
+      chart.appendChild(col);
+    });
+    cont.appendChild(chart);
+
+    const tipoTitle = document.createElement("div");
+    tipoTitle.className = "section-title";
+    tipoTitle.textContent = "Conclusão por bloco";
+    cont.appendChild(tipoTitle);
+
+    const porTipo = {};
+    itens.forEach(i => {
+      porTipo[i.tipo] = porTipo[i.tipo] || { conc: 0, nao: 0 };
+      if (i.status === "Concluido") porTipo[i.tipo].conc++;
+      if (i.status === "NaoConcluido") porTipo[i.tipo].nao++;
+    });
+    Object.keys(porTipo).forEach(tipo => {
+      const t = porTipo[tipo];
+      const total = t.conc + t.nao;
+      const pct = total > 0 ? Math.round((t.conc / total) * 100) : 0;
+      const row = document.createElement("div");
+      row.className = "tipo-row";
+      row.innerHTML = `<div class="nome">${tipo}</div><div class="track"><div class="fill" style="width:${pct}%;"></div></div><div class="pct">${pct}%</div>`;
+      cont.appendChild(row);
     });
   }
 
