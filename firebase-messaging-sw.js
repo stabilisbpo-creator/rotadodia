@@ -17,9 +17,9 @@ const messaging = firebase.messaging();
 
 // dispara quando a notificação chega com o app fechado / em segundo plano
 messaging.onBackgroundMessage((payload) => {
-  const titulo = payload.notification?.title || "Rota do Dia";
+  const titulo = payload.data?.title || "Rota do Dia";
   const opcoes = {
-    body: payload.notification?.body || "",
+    body: payload.data?.body || "",
     icon: "icon-192.png",
     badge: "icon-192.png"
   };
