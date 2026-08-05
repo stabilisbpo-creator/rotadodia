@@ -99,10 +99,17 @@
   .section-divider .label { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; }
 
   .item-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }
+  .item-card.has-notes { cursor: pointer; }
   .item-card.status-Concluido { border-color: var(--success-dim); }
   .item-card.status-NaoConcluido { border-color: var(--fail-dim); }
-  .item-time { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-faint); }
+  .item-time { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-faint); display: flex; align-items: center; gap: 6px; }
+  .item-time .expand-hint { color: var(--steel); font-size: 10px; }
   .item-title { font-size: 14px; font-weight: 500; margin-top: 2px; }
+  .item-notes {
+    display: none; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-soft);
+  }
+  .item-card.expanded .item-notes { display: block; }
   .item-card.status-Concluido .item-title, .item-card.status-NaoConcluido .item-title { color: var(--text-muted); }
   .item-actions { display: flex; gap: 8px; margin-top: 9px; }
   .action-btn {
@@ -119,9 +126,26 @@
   .edit-panel { display: none; }
   .edit-panel.show { display: block; }
   .edit-note { font-size: 11.5px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border-soft); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; line-height: 1.5; }
-  .edit-row { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+  .edit-row { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .edit-row-main { display: flex; align-items: center; gap: 8px; }
   .edit-row input[type="time"] { width: 78px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 5px 6px; }
   .edit-row input[type="text"] { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 13px; padding: 6px 8px; min-width: 0; }
+  .day-chips { display: flex; gap: 4px; margin-top: 8px; }
+  .day-chip {
+    flex: 1; text-align: center; padding: 5px 0; border-radius: 5px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-faint); font-size: 10.5px; font-family: 'IBM Plex Mono', monospace;
+    cursor: pointer; user-select: none;
+  }
+  .day-chip.active { border-color: var(--bronze); color: var(--bronze); background: var(--bronze-dim); }
+  .edit-row textarea {
+    width: 100%; margin-top: 8px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 12.5px;
+    padding: 7px 8px; resize: vertical; min-height: 40px;
+  }
+  .edit-row .notes-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-faint); margin-top: 8px; display: block;
+  }
   .apply-option { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12.5px; color: var(--text-muted); }
   .edit-actions { display: flex; gap: 8px; margin-top: 16px; }
   .edit-actions .cancel-btn { flex: 1; padding: 12px 0; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; color: var(--text-muted); font-family: 'Space Grotesk', sans-serif; font-size: 13.5px; cursor: pointer; }
@@ -324,7 +348,8 @@
       }
 
       const card = document.createElement("div");
-      card.className = "item-card status-" + item.status;
+      const temNotas = !!(item.notas && item.notas.trim());
+      card.className = "item-card status-" + item.status + (temNotas ? " has-notes" : "");
       let acao = "";
       if (item.status === "Compromisso") {
         acao = `<div class="cal-tag">📅 Google Calendar</div>`;
@@ -339,7 +364,16 @@
         const hora = item.dataHoraResposta ? new Date(item.dataHoraResposta).toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"}) : "";
         acao = `<div class="status-tag ${item.status}"><span class="dot"></span> ${label}${hora ? " às " + hora : ""}</div>`;
       }
-      card.innerHTML = `<div class="item-time">${item.horario}${duracaoTxt}</div><div class="item-title">${item.atividade}</div>${acao}`;
+      const notasHtml = temNotas ? `<div class="item-notes">${item.notas}</div>` : "";
+      const hintHtml = temNotas ? `<span class="expand-hint">▾ detalhes</span>` : "";
+      card.innerHTML = `<div class="item-time">${item.horario}${duracaoTxt}${hintHtml}</div><div class="item-title">${item.atividade}</div>${notasHtml}${acao}`;
+
+      if (temNotas) {
+        card.addEventListener("click", (e) => {
+          if (e.target.closest(".action-btn")) return; // não expande se clicou num botão de ação
+          card.classList.toggle("expanded");
+        });
+      }
       cont.appendChild(card);
     });
 
@@ -397,7 +431,7 @@
     const itens = json.config || [];
 
     cont.innerHTML = `<div class="edit-panel show">
-      <div class="edit-note">Edite horário e nome. As mudanças passam a valer a partir de amanhã, a menos que você marque "aplicar também hoje".</div>
+      <div class="edit-note">Edite horário, nome e em quais dias da semana cada item vale (toque nos dias pra ativar/desativar). As mudanças passam a valer a partir de amanhã, a menos que você marque "aplicar também hoje".</div>
       <div id="editRows"></div>
       <label class="apply-option"><input type="checkbox" id="applyToday"> Aplicar também no dia de hoje</label>
       <div class="edit-actions">
@@ -407,13 +441,34 @@
     </div>`;
 
     const rowsDiv = document.getElementById("editRows");
+    const NOMES_DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
     itens.forEach(item => {
+      const diasAtivos = new Set(item.dias || []); // [] = todos os dias
+
       const row = document.createElement("div");
       row.className = "edit-row";
       row.dataset.id = item.id;
       row.dataset.tipo = item.tipo;
       row.dataset.alerta = item.alerta || "";
-      row.innerHTML = `<input type="time" value="${item.horario}"><input type="text" value="${item.atividade}">`;
+
+      const chipsHtml = NOMES_DIAS.map((nome, i) =>
+        `<div class="day-chip${diasAtivos.size === 0 || diasAtivos.has(i) ? " active" : ""}" data-dia="${i}">${nome}</div>`
+      ).join("");
+
+      row.innerHTML = `
+        <div class="edit-row-main">
+          <input type="time" value="${item.horario}">
+          <input type="text" value="${item.atividade}">
+        </div>
+        <div class="day-chips">${chipsHtml}</div>
+        <span class="notes-label">Detalhes / notas (opcional)</span>
+        <textarea placeholder="Ex: automatizar processos, novos produtos, IA e automações...">${item.notas || ""}</textarea>`;
+
+      row.querySelectorAll(".day-chip").forEach(chip => {
+        chip.addEventListener("click", () => chip.classList.toggle("active"));
+      });
+
       rowsDiv.appendChild(row);
     });
 
@@ -424,11 +479,18 @@
 
     document.getElementById("confirmEdit").addEventListener("click", async () => {
       const aplicarHoje = document.getElementById("applyToday").checked;
-      const novosItens = [...rowsDiv.children].map(row => ({
-        id: row.dataset.id, tipo: row.dataset.tipo, alerta: row.dataset.alerta,
-        horario: row.querySelector('input[type="time"]').value,
-        atividade: row.querySelector('input[type="text"]').value
-      }));
+      const novosItens = [...rowsDiv.children].map(row => {
+        const chipsAtivos = [...row.querySelectorAll(".day-chip.active")].map(c => parseInt(c.dataset.dia, 10));
+        // se os 7 estiverem marcados, envia [] (equivale a "todos os dias", mais limpo na planilha)
+        const dias = chipsAtivos.length === 7 ? [] : chipsAtivos;
+        return {
+          id: row.dataset.id, tipo: row.dataset.tipo, alerta: row.dataset.alerta,
+          horario: row.querySelector('input[type="time"]').value,
+          atividade: row.querySelector('input[type="text"]').value,
+          notas: row.querySelector('textarea').value,
+          dias: dias
+        };
+      });
       await fetch(SCRIPT_URL, {
         method: "POST", mode: "no-cors",
         headers: { "Content-Type": "application/json" },
