@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rota do Dia</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#12151a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+<style>
+  :root {
+    --bg: #12151a; --surface: #1a1f27; --surface-2: #232a34;
+    --border: #313a47; --border-soft: #262e39;
+    --text: #e9e7e0; --text-muted: #838d9c; --text-faint: #545e6c;
+    --steel: #5b83a6; --steel-dim: #3a5468;
+    --bronze: #c0834a; --bronze-dim: #382c1e;
+    --success: #5a9c78; --success-dim: #24322b;
+    --fail: #a85a4a; --fail-dim: #3a2a26;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh; display: flex; justify-content: center; padding: 28px 16px 80px;
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(91,131,166,0.07), transparent 40%),
+      radial-gradient(circle at 85% 100%, rgba(192,131,74,0.05), transparent 40%);
+  }
+  .app { width: 100%; max-width: 480px; }
+
+  .app-header { text-align: center; margin-bottom: 18px; }
+  .app-header .mark { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-faint); }
+  .app-header .title {
+    font-size: 27px; font-weight: 700; letter-spacing: -0.02em; margin-top: 3px;
+    background: linear-gradient(90deg, var(--steel) 15%, var(--bronze) 85%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block;
+  }
+  .app-header .rule { width: 46px; height: 2px; margin: 10px auto 0; border-radius: 2px; background: linear-gradient(90deg, var(--steel), var(--bronze)); }
+
+  .main-tabs { display: flex; gap: 6px; margin: 18px 0 20px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 12px; padding: 4px; }
+  .main-tab {
+    flex: 1; text-align: center; padding: 9px 0; border-radius: 9px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--text-muted); font-family: 'Space Grotesk', sans-serif;
+  }
+  .main-tab.active { background: linear-gradient(135deg, var(--steel-dim), var(--bronze-dim)); color: var(--text); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .header-actions { display: flex; justify-content: center; margin-bottom: 6px; }
+  .edit-toggle {
+    display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 14px; color: var(--text-muted); font-size: 12px; cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .edit-toggle:hover { border-color: var(--steel); color: var(--steel); }
+  .edit-toggle.active { border-color: var(--bronze); color: var(--bronze); background: var(--bronze-dim); }
+
+  .day-nav { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 20px; }
+  .nav-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;
+  }
+  .nav-btn:hover { border-color: var(--steel); color: var(--steel); }
+  .day-label { text-align: center; }
+  .day-label .weekday { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--bronze); margin-bottom: 2px; }
+  .day-label .date { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
+
+  .loading { text-align: center; color: var(--text-faint); font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 30px 0; }
+
+  .item-card.status-Compromisso { border-color: var(--bronze); background: linear-gradient(90deg, var(--bronze-dim), var(--surface) 25%); }
+  .item-card.status-Compromisso .item-title { color: #e6cba8; }
+  .cal-tag { font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bronze); margin-top: 6px; display: inline-block; }
+
+  .highlight-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .devotional, .quote-card {
+    background: linear-gradient(135deg, var(--surface-2), var(--surface));
+    border: 1px solid var(--steel-dim); border-radius: var(--radius); padding: 13px 15px;
+  }
+  .hl-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--steel); }
+  .hl-quote { font-size: 13px; line-height: 1.5; margin-top: 6px; }
+  .hl-ref { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--text-muted); margin-top: 6px; }
+
+  .summary { display: flex; gap: 8px; margin-bottom: 22px; }
+  .summary-card { flex: 1; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 12px 14px; }
+  .summary-card .num { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; }
+  .summary-card .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .summary-card.ok .num { color: var(--success); }
+
+  .section-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 10px; }
+  .section-divider .line { flex: 1; height: 1px; background: var(--border-soft); }
+  .section-divider .label { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); white-space: nowrap; }
+
+  .item-card { background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; }
+  .item-card.has-notes { cursor: pointer; }
+  .item-card.status-Concluido { border-color: var(--success-dim); }
+  .item-card.status-NaoConcluido { border-color: var(--fail-dim); }
+  .item-time { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-faint); display: flex; align-items: center; gap: 6px; }
+  .item-time .expand-hint { color: var(--steel); font-size: 10px; }
+  .item-title { font-size: 14px; font-weight: 500; margin-top: 2px; }
+  .item-notes {
+    display: none; font-size: 12.5px; color: var(--text-muted); line-height: 1.5;
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-soft);
+  }
+  .item-card.expanded .item-notes { display: block; }
+  .item-card.status-Concluido .item-title, .item-card.status-NaoConcluido .item-title { color: var(--text-muted); }
+  .item-actions { display: flex; gap: 8px; margin-top: 9px; }
+  .action-btn {
+    flex: 1; border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+    font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; font-weight: 500; padding: 7px 0; border-radius: 7px; cursor: pointer;
+  }
+  .action-btn.ok.active { background: var(--success-dim); border-color: var(--success); color: var(--success); }
+  .action-btn.no.active { background: var(--fail-dim); border-color: var(--fail); color: var(--fail); }
+  .action-btn.confirming { font-size: 11px; }
+  .action-btn.ok.confirming { background: var(--success-dim); border-color: var(--success); color: var(--success); }
+  .action-btn.no.confirming { background: var(--fail-dim); border-color: var(--fail); color: var(--fail); }
+  .action-btn:disabled { opacity: 0.6; cursor: default; }
+  .status-tag { display: inline-flex; align-items: center; gap: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin-top: 8px; }
+  .status-tag.Concluido { color: var(--success); }
+  .status-tag.NaoConcluido { color: var(--fail); }
+  .status-tag .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .undo-link { color: var(--text-faint); text-decoration: underline; cursor: pointer; margin-left: 2px; }
+  .undo-link:hover { color: var(--steel); }
+
+  .edit-panel { display: none; }
+  .edit-panel.show { display: block; }
+  .edit-note { font-size: 11.5px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border-soft); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; line-height: 1.5; }
+  .edit-row { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+  .edit-row-main { display: flex; align-items: center; gap: 8px; }
+  .edit-row input[type="time"] { width: 78px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 5px 6px; }
+  .edit-row input[type="text"] { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 13px; padding: 6px 8px; min-width: 0; }
+  .day-chips { display: flex; gap: 4px; margin-top: 8px; }
+  .day-chip {
+    flex: 1; text-align: center; padding: 5px 0; border-radius: 5px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-faint); font-size: 10.5px; font-family: 'IBM Plex Mono', monospace;
+    cursor: pointer; user-select: none;
+  }
+  .day-chip.active { border-color: var(--bronze); color: var(--bronze); background: var(--bronze-dim); }
+  .edit-row textarea {
+    width: 100%; margin-top: 8px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 12.5px;
+    padding: 7px 8px; resize: vertical; min-height: 40px;
+  }
+  .edit-row .notes-label {
+    font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-faint); margin-top: 8px; display: block;
+  }
+  .tipo-select {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 12px; padding: 6px 4px;
+    flex-shrink: 0; width: 100px;
+  }
+  .add-row-btn {
+    width: 100%; padding: 10px 0; border: 1px dashed var(--border); border-radius: 8px;
+    background: transparent; color: var(--text-muted); font-size: 12.5px;
+    font-family: 'Space Grotesk', sans-serif; cursor: pointer; margin-top: 4px; margin-bottom: 16px;
+  }
+  .add-row-btn:hover { border-color: var(--steel); color: var(--steel); }
+  .add-block-form {
+    background: var(--surface); border: 1px solid var(--steel-dim); border-radius: 10px;
+    padding: 12px; margin-bottom: 16px;
+  }
+  .add-block-row2 { display: flex; gap: 8px; margin-top: 8px; }
+  .add-block-row2 select, .add-block-row2 input {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; padding: 6px 8px;
+  }
+  .add-block-row2 select { flex: 1; }
+  .add-block-row2 input { width: 130px; }
+  .apply-option { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 12.5px; color: var(--text-muted); }
+  .edit-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .edit-actions .cancel-btn { flex: 1; padding: 12px 0; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; color: var(--text-muted); font-family: 'Space Grotesk', sans-serif; font-size: 13.5px; cursor: pointer; }
+  .edit-actions .save-btn { flex: 2; padding: 12px 0; border: 1px solid var(--success); border-radius: var(--radius); background: var(--success-dim); color: var(--success); font-family: 'Space Grotesk', sans-serif; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+
+  .save-day-btn {
+    width: 100%; margin-top: 20px; padding: 15px 0; border: 1px solid var(--bronze); border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--bronze-dim), var(--surface) 80%); color: var(--bronze);
+    font-family: 'Space Grotesk', sans-serif; font-size: 14.5px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+  }
+  .save-confirm { text-align: center; font-size: 11.5px; color: var(--success); font-family: 'IBM Plex Mono', monospace; margin-top: 10px; opacity: 0; transition: opacity 0.2s ease; }
+  .save-confirm.show { opacity: 1; }
+
+  .period-tabs { display: flex; gap: 6px; margin: 4px 0 20px; }
+  .period-tab {
+    flex: 1; text-align: center; padding: 8px 0; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--text-muted); font-size: 12.5px; cursor: pointer; font-family: 'Space Grotesk', sans-serif;
+  }
+  .period-tab.active { border-color: var(--bronze); color: var(--bronze); background: var(--bronze-dim); }
+
+  .summary-row { display: flex; gap: 8px; margin-bottom: 22px; }
+  .summary-card2 { flex: 1; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 13px 12px; text-align: center; }
+  .summary-card2 .num { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 600; color: var(--bronze); }
+  .summary-card2 .lbl { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.3; }
+
+  .section-title { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); margin: 24px 0 12px; }
+
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 130px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius); padding: 12px 10px 8px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--border); min-height: 3px; transition: height 0.3s ease; }
+  .bar.high { background: var(--success); }
+  .bar.mid { background: var(--bronze); }
+  .bar.low { background: var(--fail); }
+  .bar-lbl { font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; color: var(--text-faint); margin-top: 5px; }
+
+  .tipo-row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border-soft); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; }
+  .tipo-row .nome { flex-shrink: 0; width: 92px; font-size: 12.5px; color: var(--text-muted); }
+  .tipo-row .track { flex: 1; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .tipo-row .fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--steel), var(--bronze)); }
+  .tipo-row .pct { width: 38px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--text); }
+
+  .streak-card {
+    background: linear-gradient(135deg, var(--bronze-dim), var(--surface) 75%);
+    border: 1px solid #6b4e30; border-radius: var(--radius); padding: 16px; text-align: center; margin-bottom: 8px;
+  }
+  .streak-card .num { font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 700; color: var(--bronze); }
+  .streak-card .lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .footer-note { text-align: center; margin-top: 24px; font-size: 11px; color: var(--text-faint); font-family: 'IBM Plex Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="app-header">
+    <div class="mark">STABILIS · PRODUTIVIDADE PESSOAL</div>
+    <div class="title">Rota do Dia</div>
+    <div class="rule"></div>
+  </div>
+
+  <div class="main-tabs">
+    <div class="main-tab active" data-view="dia">📋 Hoje</div>
+    <div class="main-tab" data-view="evolucao">📈 Evolução</div>
+  </div>
+
+  <div class="view active" id="viewDia">
+    <div class="header-actions" style="gap:8px;">
+      <button class="edit-toggle" id="editToggle">✏️ Editar rotina</button>
+      <button class="edit-toggle" id="notifToggle">🔔 Ativar notificações</button>
+    </div>
+
+    <div class="day-nav">
+      <button class="nav-btn" id="prevDay" aria-label="Dia anterior">‹</button>
+      <div class="day-label">
+        <span class="weekday" id="weekdayLabel">—</span>
+        <span class="date" id="dateLabel">—</span>
+      </div>
+      <button class="nav-btn" id="nextDay" aria-label="Próximo dia">›</button>
+    </div>
+
+    <div id="debugBox" style="background:#3a2a26;border:1px solid #a85a4a;border-radius:8px;padding:10px;margin-bottom:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#e9e7e0;"></div>
+
+    <div id="highlightRow" class="highlight-row"></div>
+
+    <div id="conteudoDia"><div class="loading">carregando o dia...</div></div>
+
+    <button class="save-day-btn" id="saveDayBtn" style="display:none;">Salvar dia e avançar <span>→</span></button>
+    <div class="save-confirm" id="saveConfirm"></div>
+  </div>
+
+  <div class="view" id="viewEvolucao">
+    <div class="period-tabs">
+      <div class="period-tab" data-dias="7">7 dias</div>
+      <div class="period-tab active" data-dias="14">14 dias</div>
+      <div class="period-tab" data-dias="30">30 dias</div>
+    </div>
+    <div id="conteudoEvolucao"><div class="loading">carregando histórico...</div></div>
+  </div>
+
+  <div class="footer-note">rota do dia · stabilis</div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnLjL6rqu6ShvSiKGsEPlddNjJKUR1MYHm3KmEZauNtlQXIsnqY8FRUPL3hevRZsjRfg/exec";
+
+  document.querySelectorAll(".main-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".main-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById("view" + (tab.dataset.view === "dia" ? "Dia" : "Evolucao")).classList.add("active");
+      if (tab.dataset.view === "evolucao" && !evolucaoCarregada) carregarHistorico();
+    });
+  });
+
+  let dataAtual = new Date();
+  let itensDoDia = [];
+
+  function formatarDataBR(d) {
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return dd + "/" + mm + "/" + d.getFullYear();
+  }
+  const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
+  function renderCabecalhoData() {
+    document.getElementById("weekdayLabel").textContent = diasSemana[dataAtual.getDay()];
+    document.getElementById("dateLabel").textContent = formatarDataBR(dataAtual);
+  }
+
+  async function carregarDia() {
+    document.getElementById("conteudoDia").innerHTML = '<div class="loading">carregando o dia...</div>';
+    document.getElementById("saveDayBtn").style.display = "none";
+    renderCabecalhoData();
+    const dataStr = formatarDataBR(dataAtual);
+    try {
+      const resp = await fetch(SCRIPT_URL + "?action=getDia&data=" + encodeURIComponent(dataStr) + "&_t=" + Date.now(), { cache: "no-store" });
+      const json = await resp.json();
+      let brutos = json.itens || [];
+
+      // filtro de segurança extra: remove "Compromisso" cujo título já existe
+      // como Rotina/Profissional/Noite no mesmo dia (blindagem contra duplicata)
+      const nomesRotina = new Set(brutos.filter(i => i.status !== "Compromisso").map(i => i.atividade));
+      itensDoDia = brutos.filter(i => i.status !== "Compromisso" || !nomesRotina.has(i.atividade));
+
+      renderDia();
+      // DEBUG TEMPORÁRIO — remover depois de resolver a duplicata
+      const compromissosBrutos = brutos.filter(i => i.status === "Compromisso").length;
+      const compromissosFiltrados = itensDoDia.filter(i => i.status === "Compromisso").length;
+      document.getElementById("debugBox").innerHTML =
+        `DEBUG — recebidos: ${brutos.length} (compromissos: ${compromissosBrutos}) → após filtro: ${itensDoDia.length} (compromissos: ${compromissosFiltrados})`;
+    } catch (err) {
+      document.getElementById("conteudoDia").innerHTML = '<div class="loading">erro ao carregar — confira a SCRIPT_URL</div>';
+    }
+  }
+
+  function calcularDuracaoMin(inicio, fim) {
+    const [h1, m1] = inicio.split(":").map(Number);
+    const [h2, m2] = fim.split(":").map(Number);
+    return (h2 * 60 + m2) - (h1 * 60 + m1);
+  }
+
+  function renderDia() {
+    const cont = document.getElementById("conteudoDia");
+    cont.innerHTML = "";
+
+    const concluidos = itensDoDia.filter(i => i.status === "Concluido").length;
+    const naoConcluidos = itensDoDia.filter(i => i.status === "NaoConcluido").length;
+    const pendentes = itensDoDia.filter(i => i.status === "Pendente").length;
+
+    const summary = document.createElement("div");
+    summary.className = "summary";
+    summary.innerHTML = `
+      <div class="summary-card ok"><div class="num">${concluidos}</div><div class="lbl">Concluídas</div></div>
+      <div class="summary-card"><div class="num">${naoConcluidos}</div><div class="lbl">Não concluídas</div></div>
+      <div class="summary-card"><div class="num">${pendentes}</div><div class="lbl">Pendentes</div></div>`;
+    cont.appendChild(summary);
+
+    let ultimoTipo = null;
+    const ordenado = [...itensDoDia].sort((a, b) => a.horario.localeCompare(b.horario));
+
+    ordenado.forEach((item, idx) => {
+      if (item.tipo !== ultimoTipo) {
+        const div = document.createElement("div");
+        div.className = "section-divider";
+        div.innerHTML = `<div class="line"></div><div class="label">${item.tipo || "Outros"}</div><div class="line"></div>`;
+        cont.appendChild(div);
+        ultimoTipo = item.tipo;
+      }
+
+      // duração: usa horarioFim se existir (compromissos reais), senão calcula
+      // até o próximo item da lista (aproximado, só pra referência visual)
+      let duracaoTxt = "";
+      if (item.horarioFim) {
+        duracaoTxt = " · " + calcularDuracaoMin(item.horario, item.horarioFim) + " min";
+      } else if (idx < ordenado.length - 1) {
+        const min = calcularDuracaoMin(item.horario, ordenado[idx + 1].horario);
+        if (min > 0 && min <= 240) duracaoTxt = " · " + min + " min";
+      }
+
+      const card = document.createElement("div");
+      const temNotas = !!(item.notas && item.notas.trim());
+      card.className = "item-card status-" + item.status + (temNotas ? " has-notes" : "");
+      let acao = "";
+      if (item.status === "Compromisso") {
+        acao = `<div class="cal-tag">📅 Google Calendar</div>`;
+      } else if (item.status === "Pendente") {
+        acao = `
+          <div class="item-actions">
+            <button class="action-btn ok" data-id="${item.configId}" data-status="Concluido">Concluído</button>
+            <button class="action-btn no" data-id="${item.configId}" data-status="NaoConcluido">Não consegui</button>
+          </div>`;
+      } else {
+        const label = item.status === "Concluido" ? "Concluído" : "Não concluído";
+        const hora = item.dataHoraResposta ? new Date(item.dataHoraResposta).toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit"}) : "";
+        acao = `<div class="status-tag ${item.status}"><span class="dot"></span> ${label}${hora ? " às " + hora : ""}
+          <span class="undo-link" data-id="${item.configId}">· desfazer</span></div>`;
+      }
+      const notasHtml = temNotas ? `<div class="item-notes">${item.notas}</div>` : "";
+      const hintHtml = temNotas ? `<span class="expand-hint">▾ detalhes</span>` : "";
+      card.innerHTML = `<div class="item-time">${item.horario}${duracaoTxt}${hintHtml}</div><div class="item-title">${item.atividade}</div>${notasHtml}${acao}`;
+
+      if (temNotas) {
+        card.addEventListener("click", (e) => {
+          if (e.target.closest(".action-btn")) return; // não expande se clicou num botão de ação
+          card.classList.toggle("expanded");
+        });
+      }
+      cont.appendChild(card);
+    });
+
+    cont.querySelectorAll(".action-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => handleAcaoClick(e, btn));
+    });
+    cont.querySelectorAll(".undo-link").forEach(link => {
+      link.addEventListener("click", (e) => {
+        e.stopPropagation();
+        marcarStatus(link.dataset.id, "Pendente");
+      });
+    });
+
+    document.getElementById("saveDayBtn").style.display = "flex";
+  }
+
+  // Exige um segundo toque pra confirmar — evita marcar por engano ao rolar a tela,
+  // e dá feedback visual imediato mesmo se a rede demorar pra responder.
+  function handleAcaoClick(e, btn) {
+    e.stopPropagation();
+    const group = btn.parentElement;
+
+    if (!btn.classList.contains("confirming")) {
+      group.querySelectorAll(".action-btn").forEach(b => {
+        b.classList.remove("confirming");
+        b.textContent = b.dataset.status === "Concluido" ? "Concluído" : "Não consegui";
+      });
+      btn.classList.add("confirming");
+      btn.dataset.textoOriginal = btn.textContent;
+      btn.textContent = "Toca de novo pra confirmar";
+      clearTimeout(btn._timeoutConfirm);
+      btn._timeoutConfirm = setTimeout(() => {
+        btn.classList.remove("confirming");
+        btn.textContent = btn.dataset.textoOriginal;
+      }, 3000);
+      return;
+    }
+
+    clearTimeout(btn._timeoutConfirm);
+    group.querySelectorAll(".action-btn").forEach(b => { b.disabled = true; });
+    btn.textContent = "Salvando...";
+    marcarStatus(btn.dataset.id, btn.dataset.status);
+  }
+
+  async function marcarStatus(configId, status) {
+    const dataStr = formatarDataBR(dataAtual);
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST", mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "marcarStatus", data: dataStr, configId: configId, status: status })
+      });
+      const item = itensDoDia.find(i => i.configId === configId);
+      if (item) { item.status = status; item.dataHoraResposta = status === "Pendente" ? "" : new Date().toISOString(); }
+      renderDia();
+    } catch (err) {
+      alert("Não consegui salvar — confira sua conexão e tenta de novo.");
+      renderDia(); // volta ao estado real (sem travar nos botões desabilitados)
+    }
+  }
+
+  document.getElementById("prevDay").addEventListener("click", () => { dataAtual.setDate(dataAtual.getDate() - 1); carregarDia(); });
+  document.getElementById("nextDay").addEventListener("click", () => { dataAtual.setDate(dataAtual.getDate() + 1); carregarDia(); });
+
+  document.getElementById("saveDayBtn").addEventListener("click", async () => {
+    const dataStr = formatarDataBR(dataAtual);
+    await fetch(SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "fecharDia", data: dataStr })
+    });
+    const confirmEl = document.getElementById("saveConfirm");
+    confirmEl.textContent = "✓ dia de " + dataStr + " salvo no histórico";
+    confirmEl.classList.add("show");
+    setTimeout(() => {
+      confirmEl.classList.remove("show");
+      dataAtual.setDate(dataAtual.getDate() + 1);
+      carregarDia();
+      evolucaoCarregada = false;
+    }, 900);
+  });
+
+  document.getElementById("editToggle").addEventListener("click", carregarEdicao);
+
+  async function carregarEdicao() {
+    const toggle = document.getElementById("editToggle");
+    const cont = document.getElementById("conteudoDia");
+    document.getElementById("saveDayBtn").style.display = "none";
+    cont.innerHTML = '<div class="loading">carregando rotina...</div>';
+    toggle.textContent = "✕ Fechar edição";
+
+    const resp = await fetch(SCRIPT_URL + "?action=getConfig");
+    const json = await resp.json();
+    const itens = json.config || [];
+
+    cont.innerHTML = `<div class="edit-panel show">
+      <div class="edit-note">Edite horário, nome e em quais dias da semana cada item vale (toque nos dias pra ativar/desativar). As mudanças passam a valer a partir de amanhã, a menos que você marque "aplicar também hoje".</div>
+      <div id="editRows"></div>
+
+      <button class="add-row-btn" id="addBlockBtn">+ Adicionar novo bloco</button>
+      <div class="add-block-form" id="addBlockForm" style="display:none;">
+        <div class="edit-row-main">
+          <input type="time" id="newHorario" value="08:00">
+          <input type="text" id="newAtividade" placeholder="Nome do bloco">
+        </div>
+        <div class="add-block-row2">
+          <select id="newTipo">
+            <option value="Rotina">Rotina</option>
+            <option value="Profissional" selected>Profissional</option>
+            <option value="Noite">Noite</option>
+          </select>
+          <input type="number" id="newDuracao" placeholder="Duração (min)" min="1" value="20">
+        </div>
+        <label class="apply-option"><input type="checkbox" id="empurrarSeguintes" checked> Empurrar os horários seguintes automaticamente</label>
+        <div class="edit-actions">
+          <button class="cancel-btn" id="cancelAddBlock">Cancelar</button>
+          <button class="save-btn" id="confirmAddBlock">Adicionar bloco</button>
+        </div>
+      </div>
+
+      <label class="apply-option"><input type="checkbox" id="applyToday"> Aplicar também no dia de hoje</label>
+      <div class="edit-actions">
+        <button class="cancel-btn" id="cancelEdit">Cancelar</button>
+        <button class="save-btn" id="confirmEdit">Salvar rotina</button>
+      </div>
+    </div>`;
+
+    const rowsDiv = document.getElementById("editRows");
+    const NOMES_DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+    function criarLinhaEdicao(item) {
+      const diasAtivos = new Set(item.dias || []); // [] = todos os dias
+
+      const row = document.createElement("div");
+      row.className = "edit-row";
+      row.dataset.id = item.id || "";
+      row.dataset.alerta = item.alerta || "";
+
+      const chipsHtml = NOMES_DIAS.map((nome, i) =>
+        `<div class="day-chip${diasAtivos.size === 0 || diasAtivos.has(i) ? " active" : ""}" data-dia="${i}">${nome}</div>`
+      ).join("");
+
+      const tipos = ["Rotina", "Profissional", "Noite"];
+      const tipoOptions = tipos.map(t => `<option value="${t}"${item.tipo === t ? " selected" : ""}>${t}</option>`).join("");
+
+      row.innerHTML = `
+        <div class="edit-row-main">
+          <input type="time" value="${item.horario}">
+          <input type="text" value="${item.atividade}" placeholder="Nome do bloco">
+          <select class="tipo-select">${tipoOptions}</select>
+        </div>
+        <div class="day-chips">${chipsHtml}</div>
+        <span class="notes-label">Detalhes / notas (opcional)</span>
+        <textarea placeholder="Ex: automatizar processos, novos produtos, IA e automações...">${item.notas || ""}</textarea>`;
+
+      row.querySelectorAll(".day-chip").forEach(chip => {
+        chip.addEventListener("click", () => chip.classList.toggle("active"));
+      });
+
+      return row;
+    }
+
+    itens.forEach(item => rowsDiv.appendChild(criarLinhaEdicao(item)));
+
+    // ---- adicionar novo bloco, com opção de empurrar os seguintes ----
+    function horaParaMin(hhmm) {
+      const [h, m] = hhmm.split(":").map(Number);
+      return h * 60 + m;
+    }
+    function minParaHora(min) {
+      min = ((min % 1440) + 1440) % 1440; // segurança, não deixa passar de 23:59 nem ficar negativo
+      const h = Math.floor(min / 60), m = min % 60;
+      return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+    }
+
+    document.getElementById("addBlockBtn").addEventListener("click", () => {
+      document.getElementById("addBlockForm").style.display = "block";
+      document.getElementById("addBlockBtn").style.display = "none";
+    });
+    document.getElementById("cancelAddBlock").addEventListener("click", () => {
+      document.getElementById("addBlockForm").style.display = "none";
+      document.getElementById("addBlockBtn").style.display = "block";
+    });
+
+    document.getElementById("confirmAddBlock").addEventListener("click", () => {
+      const novoHorario = document.getElementById("newHorario").value;
+      const novoNome = document.getElementById("newAtividade").value.trim();
+      const novoTipo = document.getElementById("newTipo").value;
+      const duracao = parseInt(document.getElementById("newDuracao").value, 10) || 0;
+      const empurrar = document.getElementById("empurrarSeguintes").checked;
+
+      if (!novoNome) { alert("Dá um nome pro bloco antes de adicionar."); return; }
+
+      if (empurrar && duracao > 0) {
+        const novoMin = horaParaMin(novoHorario);
+        [...rowsDiv.children].forEach(row => {
+          const input = row.querySelector('input[type="time"]');
+          if (horaParaMin(input.value) >= novoMin) {
+            input.value = minParaHora(horaParaMin(input.value) + duracao);
+          }
+        });
+      }
+
+      const novaLinha = criarLinhaEdicao({
+        id: "", horario: novoHorario, atividade: novoNome, tipo: novoTipo,
+        alerta: "", notas: "", dias: [1, 2, 3, 4, 5]
+      });
+
+      const novoMinInsert = horaParaMin(novoHorario);
+      const proximaMaior = [...rowsDiv.children].find(row => horaParaMin(row.querySelector('input[type="time"]').value) > novoMinInsert);
+      if (proximaMaior) rowsDiv.insertBefore(novaLinha, proximaMaior);
+      else rowsDiv.appendChild(novaLinha);
+
+      document.getElementById("newHorario").value = "08:00";
+      document.getElementById("newAtividade").value = "";
+      document.getElementById("newDuracao").value = "20";
+      document.getElementById("addBlockForm").style.display = "none";
+      document.getElementById("addBlockBtn").style.display = "block";
+    });
+
+    document.getElementById("cancelEdit").addEventListener("click", () => {
+      toggle.textContent = "✏️ Editar rotina";
+      carregarDia();
+    });
+
+    document.getElementById("confirmEdit").addEventListener("click", async () => {
+      const aplicarHoje = document.getElementById("applyToday").checked;
+      const novosItens = [...rowsDiv.children].map(row => {
+        const chipsAtivos = [...row.querySelectorAll(".day-chip.active")].map(c => parseInt(c.dataset.dia, 10));
+        // se os 7 estiverem marcados, envia [] (equivale a "todos os dias", mais limpo na planilha)
+        const dias = chipsAtivos.length === 7 ? [] : chipsAtivos;
+        return {
+          id: row.dataset.id, tipo: row.querySelector(".tipo-select").value, alerta: row.dataset.alerta,
+          horario: row.querySelector('input[type="time"]').value,
+          atividade: row.querySelector('input[type="text"]').value,
+          notas: row.querySelector('textarea').value,
+          dias: dias
+        };
+      });
+      await fetch(SCRIPT_URL, {
+        method: "POST", mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "salvarRotina", itens: novosItens, aplicarHoje: aplicarHoje })
+      });
+      toggle.textContent = "✏️ Editar rotina";
+      carregarDia();
+    });
+  }
+
+  let diasSelecionados = 14;
+  let evolucaoCarregada = false;
+
+  document.querySelectorAll(".period-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".period-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      diasSelecionados = parseInt(tab.dataset.dias, 10);
+      carregarHistorico();
+    });
+  });
+
+  function parseDataBR(str) {
+    const p = str.split("/");
+    return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+  }
+
+  async function carregarHistorico() {
+    document.getElementById("conteudoEvolucao").innerHTML = '<div class="loading">carregando histórico...</div>';
+    try {
+      const resp = await fetch(SCRIPT_URL + "?action=getHistorico&dias=" + diasSelecionados);
+      const json = await resp.json();
+      renderHistorico(json.itens || []);
+      evolucaoCarregada = true;
+    } catch (err) {
+      document.getElementById("conteudoEvolucao").innerHTML = '<div class="loading">erro ao carregar — confira a SCRIPT_URL</div>';
+    }
+  }
+
+  function renderHistorico(itens) {
+    const cont = document.getElementById("conteudoEvolucao");
+    cont.innerHTML = "";
+
+    if (itens.length === 0) {
+      cont.innerHTML = '<div class="loading">ainda não há registros nesse período</div>';
+      return;
+    }
+
+    const porDia = {};
+    itens.forEach(i => { (porDia[i.data] = porDia[i.data] || []).push(i); });
+    const diasOrdenados = Object.keys(porDia).sort((a, b) => parseDataBR(a) - parseDataBR(b));
+
+    const totalConcluido = itens.filter(i => i.status === "Concluido").length;
+    const totalNao = itens.filter(i => i.status === "NaoConcluido").length;
+    const totalRespondido = totalConcluido + totalNao;
+    const taxaGeral = totalRespondido > 0 ? Math.round((totalConcluido / totalRespondido) * 100) : 0;
+
+    const summary = document.createElement("div");
+    summary.className = "summary-row";
+    summary.innerHTML = `
+      <div class="summary-card2"><div class="num">${diasOrdenados.length}</div><div class="lbl">Dias registrados</div></div>
+      <div class="summary-card2"><div class="num">${taxaGeral}%</div><div class="lbl">Taxa de conclusão</div></div>
+      <div class="summary-card2"><div class="num">${totalConcluido}</div><div class="lbl">Tarefas concluídas</div></div>`;
+    cont.appendChild(summary);
+
+    let sequencia = 0;
+    for (let i = diasOrdenados.length - 1; i >= 0; i--) {
+      const doDia = porDia[diasOrdenados[i]];
+      const fechado = doDia.some(x => x.diaFechado === true);
+      if (!fechado) continue;
+      const conc = doDia.filter(x => x.status === "Concluido").length;
+      const nao = doDia.filter(x => x.status === "NaoConcluido").length;
+      const taxa = (conc + nao) > 0 ? conc / (conc + nao) : 0;
+      if (taxa >= 0.8) sequencia++; else break;
+    }
+    const streak = document.createElement("div");
+    streak.className = "streak-card";
+    streak.innerHTML = `<div class="num">${sequencia}</div><div class="lbl">dias seguidos com 80%+ de conclusão</div>`;
+    cont.appendChild(streak);
+
+    const chartTitle = document.createElement("div");
+    chartTitle.className = "section-title";
+    chartTitle.textContent = "Conclusão por dia";
+    cont.appendChild(chartTitle);
+
+    const chart = document.createElement("div");
+    chart.className = "bar-chart";
+    diasOrdenados.forEach(data => {
+      const doDia = porDia[data];
+      const conc = doDia.filter(x => x.status === "Concluido").length;
+      const nao = doDia.filter(x => x.status === "NaoConcluido").length;
+      const taxa = (conc + nao) > 0 ? Math.round((conc / (conc + nao)) * 100) : 0;
+      const alturaPx = Math.max(3, Math.round((taxa / 100) * 95));
+      let classe = "low";
+      if (taxa >= 75) classe = "high"; else if (taxa >= 40) classe = "mid";
+      const dd = data.split("/")[0];
+      const col = document.createElement("div");
+      col.className = "bar-col";
+      col.innerHTML = `<div class="bar ${classe}" style="height:${alturaPx}px;" title="${data} — ${taxa}%"></div><div class="bar-lbl">${dd}</div>`;
+      chart.appendChild(col);
+    });
+    cont.appendChild(chart);
+
+    const tipoTitle = document.createElement("div");
+    tipoTitle.className = "section-title";
+    tipoTitle.textContent = "Conclusão por bloco";
+    cont.appendChild(tipoTitle);
+
+    const porTipo = {};
+    itens.forEach(i => {
+      porTipo[i.tipo] = porTipo[i.tipo] || { conc: 0, nao: 0 };
+      if (i.status === "Concluido") porTipo[i.tipo].conc++;
+      if (i.status === "NaoConcluido") porTipo[i.tipo].nao++;
+    });
+    Object.keys(porTipo).forEach(tipo => {
+      const t = porTipo[tipo];
+      const total = t.conc + t.nao;
+      const pct = total > 0 ? Math.round((t.conc / total) * 100) : 0;
+      const row = document.createElement("div");
+      row.className = "tipo-row";
+      row.innerHTML = `<div class="nome">${tipo}</div><div class="track"><div class="fill" style="width:${pct}%;"></div></div><div class="pct">${pct}%</div>`;
+      cont.appendChild(row);
+    });
+  }
+
+  async function carregarDestaques() {
+    try {
+      const resp = await fetch(SCRIPT_URL + "?action=getDestaques");
+      const json = await resp.json();
+      const el = document.getElementById("highlightRow");
+      el.innerHTML = `
+        <div class="devotional">
+          <div class="hl-eyebrow">📖 Devocional de hoje</div>
+          <div class="hl-quote">"${json.versiculo.texto}"</div>
+          <div class="hl-ref">${json.versiculo.referencia} — NVI</div>
+        </div>
+        <div class="quote-card">
+          <div class="hl-eyebrow">💬 Frase do dia</div>
+          <div class="hl-quote">"${json.frase.texto}"</div>
+          <div class="hl-ref">${json.frase.autor} — traduzido automaticamente</div>
+        </div>`;
+    } catch (err) {
+      // se falhar, simplesmente não mostra os cards — não trava o resto do painel
+    }
+  }
+
+  carregarDia();
+  carregarDestaques();
+
+  /* ========================================================
+     PUSH NOTIFICATIONS — Firebase Cloud Messaging
+     ⚠️ Troque os valores abaixo pelo firebaseConfig real
+  ======================================================== */
+  const firebaseConfig = {
+    apiKey: "AIzaSyBO__2BO5kGHGekDg9IH9uldGthJiFmdN8",
+    authDomain: "rota-do-dia.firebaseapp.com",
+    projectId: "rota-do-dia",
+    storageBucket: "rota-do-dia.firebasestorage.app",
+    messagingSenderId: "428174221981",
+    appId: "1:428174221981:web:5c893bf42cd7efc24b6a74"
+  };
+  const VAPID_KEY = "BMDiV2ZQEeQkuZzakicWLstLFRF4wXI-uJg1b8rd0mqmDxbfbEIanoRgtBg8aeSJIfYVc-3ABYvmnmDbTuJmrQI";
+
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
+
+  const notifToggle = document.getElementById("notifToggle");
+
+  async function statusNotificacao() {
+    if (!("Notification" in window)) return "indisponivel";
+    return Notification.permission; // "default" | "granted" | "denied"
+  }
+
+  async function atualizarBotaoNotif() {
+    const status = await statusNotificacao();
+    const tokenEnviado = localStorage.getItem("pushTokenEnviado") === "true";
+    if (status === "granted" && tokenEnviado) {
+      notifToggle.textContent = "✓ Notificações ativas";
+      notifToggle.classList.add("active");
+    } else if (status === "denied") {
+      notifToggle.textContent = "🔕 Bloqueado no navegador";
+      notifToggle.classList.remove("active");
+    } else {
+      notifToggle.textContent = "🔔 Ativar notificações";
+      notifToggle.classList.remove("active");
+    }
+  }
+
+  notifToggle.addEventListener("click", async () => {
+    try {
+      notifToggle.textContent = "⏳ Ativando...";
+      await navigator.serviceWorker.register("firebase-messaging-sw.js");
+      const registration = await navigator.serviceWorker.ready; // espera o SW ficar ativo de verdade
+
+      const permissao = await Notification.requestPermission();
+      if (permissao !== "granted") {
+        localStorage.removeItem("pushTokenEnviado");
+        await atualizarBotaoNotif();
+        return;
+      }
+
+      const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+      if (!token) {
+        notifToggle.textContent = "⚠️ Não gerou token — tenta de novo";
+        return;
+      }
+
+      await fetch(SCRIPT_URL, {
+        method: "POST", mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "salvarToken", token: token })
+      });
+      localStorage.setItem("pushTokenEnviado", "true");
+      await atualizarBotaoNotif();
+    } catch (err) {
+      console.error("Erro ao ativar notificações:", err);
+      notifToggle.textContent = "⚠️ Erro — tenta de novo";
+    }
+  });
+
+  atualizarBotaoNotif();
+</script>
+</body>
+</html>
